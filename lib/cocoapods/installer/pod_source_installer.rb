@@ -22,16 +22,19 @@ module Pod
       attr_reader :can_cache
       alias_method :can_cache?, :can_cache
 
+      attr_accessor :force_static
+
       # Initialize a new instance
       #
       # @param [Sandbox] sandbox @see sandbox
       # @param [Hash{Symbol=>Array}] specs_by_platform @see specs_by_platform
       # @param [Boolean] can_cache @see can_cache
       #
-      def initialize(sandbox, specs_by_platform, can_cache: true)
+      def initialize(sandbox, specs_by_platform, can_cache: true, force_static: false)
         @sandbox = sandbox
         @specs_by_platform = specs_by_platform
         @can_cache = can_cache
+        @force_static = force_static
       end
 
       # @return [String] A string suitable for debugging.
@@ -117,7 +120,8 @@ module Pod
       # @return [void]
       #
       def download_source
-        download_result = Downloader.download(download_request, root, :can_cache => can_cache?)
+        download_result = @force_static ? Downloader.download_force_static(download_request, root)
+                                        : Downloader.download(download_request, root, :can_cache => can_cache?)
 
         if (@specific_source = download_result.checkout_options) && specific_source != root_spec.source
           sandbox.store_checkout_source(root_spec.name, specific_source)
@@ -138,6 +142,7 @@ module Pod
       #
       def clean_installation
         cleaner = Sandbox::PodDirCleaner.new(root, specs_by_platform)
+        cleaner.force_static = @force_static
         cleaner.clean!
       end
 

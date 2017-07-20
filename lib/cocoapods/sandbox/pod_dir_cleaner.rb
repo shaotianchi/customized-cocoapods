@@ -3,10 +3,12 @@ module Pod
     class PodDirCleaner
       attr_reader :root
       attr_reader :specs_by_platform
+      attr_accessor :force_static
 
-      def initialize(root, specs_by_platform)
+      def initialize(root, specs_by_platform, force_static = false)
         @root = root
         @specs_by_platform = specs_by_platform
+        @force_static = force_static
       end
 
       # Removes all the files not needed for the installation according to the
@@ -25,7 +27,11 @@ module Pod
       #
       def file_accessors
         @file_accessors ||= specs_by_platform.flat_map do |platform, specs|
-          specs.flat_map { |spec| Sandbox::FileAccessor.new(path_list, spec.consumer(platform)) }
+          specs.flat_map { |spec|
+            accessor = Sandbox::FileAccessor.new(path_list, spec.consumer(platform))
+            accessor.force_static = @force_static
+            accessor
+          }
         end
       end
 

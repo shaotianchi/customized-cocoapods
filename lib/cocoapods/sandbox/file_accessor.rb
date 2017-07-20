@@ -83,11 +83,7 @@ module Pod
       # @return [Array<Pathname>] the source files of the specification.
       #
       def source_files
-        if @force_static
-          []
-        else
-          paths_for_attribute(:source_files)
-        end
+        paths_for_attribute(:source_files)
       end
 
       # @return [Array<Pathname>] the source files of the specification that
@@ -336,8 +332,9 @@ module Pod
       def paths_for_attribute(attribute, include_dirs = false)
         file_patterns = spec_consumer.send(attribute)
         if attribute == :vendored_libraries && @force_static
-          file_patterns << '/ForceLib/*.a'
+          file_patterns << '*.a'
         end
+
         options = {
           :exclude_patterns => spec_consumer.exclude_files,
           :dir_pattern => GLOB_PATTERNS[attribute],

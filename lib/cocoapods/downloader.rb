@@ -57,6 +57,31 @@ module Pod
       result
     end
 
+    def self.download_force_static(
+      request,
+      target
+    )
+      result = Downloader.download(request, target)
+      spec = request.spec
+      location = "#{result.location}/ForceStatic"
+      unless Dir.exist? location
+        FileUtils.mkdir_p location
+        `cd #{location} && pod package #{spec.defined_in_file} --library --force --spec-sources=https://github.com/CocoaPods/Specs.git,http://git.souche.com/geliang/cheniu_pod.git,http://git.souche.com/zhangting/DFC_Specs.git`
+      end
+
+      request = preprocess_request(request)
+
+      location = "#{location}/#{spec.name}-#{spec.version}/ios"
+
+      if target && result.location && target != result.location
+        UI.message "Copying #{request.name} from `#{location}` to #{UI.path target}", '> ' do
+          FileUtils.rm_rf target
+          FileUtils.cp_r(location, target)
+        end
+      end
+      result
+    end
+
     # Performs the download from the given `request` to the given `target` location.
     #
     # @return [Response, Hash<String,Specification>]

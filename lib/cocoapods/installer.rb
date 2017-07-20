@@ -336,17 +336,22 @@ module Pod
 
     def create_pod_installer(pod_name)
       specs_by_platform = {}
+      force_static = false
       pod_targets.each do |pod_target|
         if pod_target.root_spec.name == pod_name
           specs_by_platform[pod_target.platform] ||= []
           specs_by_platform[pod_target.platform].concat(pod_target.specs)
+          dependency = pod_target.target_definitions.map(&:dependencies).flatten.select { |dep|
+            dep.name == pod_name
+          }.first()
+          force_static = dependency.force_static if dependency
         end
       end
 
       raise Informative, "Could not install '#{pod_name}' pod. There is no target that supports it." if specs_by_platform.empty?
 
       @pod_installers ||= []
-      pod_installer = PodSourceInstaller.new(sandbox, specs_by_platform, :can_cache => installation_options.clean?)
+      pod_installer = PodSourceInstaller.new(sandbox, specs_by_platform, :can_cache => installation_options.clean?, :force_static => force_static)
       @pod_installers << pod_installer
       pod_installer
     end
@@ -359,7 +364,7 @@ module Pod
     #
     def install_source_of_pod(pod_name)
       pod_installer = create_pod_installer(pod_name)
-      # pod_installer.install!
+      pod_installer.install!
 
       @installed_specs.concat(pod_installer.specs_by_platform.values.flatten.uniq)
     end
@@ -431,7 +436,6 @@ module Pod
 
         aggregate_target.user_build_configurations.keys.each do |config|
           pod_targets = aggregate_target.pod_targets_for_build_configuration(config)
-
           dependencies = pod_targets.select(&:should_build?).flat_map(&:dependencies)
           dependended_upon_targets = pod_targets.select { |t| dependencies.include?(t.pod_name) && !t.should_build? }
 
